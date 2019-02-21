@@ -10,6 +10,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+
 import com.minesweeper.gui.Button;
 import com.minesweeper.gui.GUIAction;
 import com.minesweeper.gui.GUIElement;
@@ -56,7 +60,7 @@ public class Main extends PApplet{
 	
 	public void readHighscores() {
 		try {
-			highscoreFile = new File("highscores.txt");
+			highscoreFile = new File("res/highscores.txt");
 			if(!highscoreFile.exists())
 				return;
 			BufferedReader in = new BufferedReader(new FileReader(highscoreFile));
@@ -72,7 +76,7 @@ public class Main extends PApplet{
 	
 	public void writeHighscores() {
 		try {
-			highscoreFile = new File("highscores.txt");
+			highscoreFile = new File("res/highscores.txt");
 			if(!highscoreFile.exists())
 				highscoreFile.createNewFile();
 			BufferedWriter out = new BufferedWriter(new FileWriter(highscoreFile));
@@ -149,7 +153,7 @@ public class Main extends PApplet{
 				Main.pa.restart();
 			}
 		}));
-		gradient = loadImage("gradient_b-w.png");
+		gradient = loadImage("res/gradient_b-w.png");
 		stopMap();
 	}
 	
@@ -214,11 +218,32 @@ public class Main extends PApplet{
 		}
 	}
 	
+	public static synchronized void playSound(final String url) {
+		  new Thread(new Runnable() {
+		  // The wrapper thread is unnecessary, unless it blocks on the
+		  // Clip finishing; see comments.
+		    public void run() {
+		      try {
+		        Clip clip = AudioSystem.getClip();
+		        AudioInputStream inputStream = AudioSystem.getAudioInputStream(
+		        		new File("res/sounds/" + url));
+		        clip.open(inputStream);
+		        clip.start(); 
+		      } catch (Exception e) {
+		        System.err.println(e.getMessage());
+		      }
+		    }
+		  }).start();
+		}
+	
 	public void endGame(boolean won) {
 		map.revealBombs(won);
 		if(won) {
+			playSound("win.wav");
 			highscores.add(timer);
 			writeHighscores();
+		}else {
+			playSound("loose.wav");
 		}
 		active = false;
 	}
@@ -234,6 +259,7 @@ public class Main extends PApplet{
 				endGame(false);
 				//exit();
 			}
+			playSound("click.wav");
 			map.revealField(f.getX(), f.getY());
 		}
 	}
@@ -268,6 +294,9 @@ public class Main extends PApplet{
 	public void keyPressed() {
 		if(started) {
 			Field f = map.getField((mouseX-xOff)/Field.fieldSize, (mouseY-yOff)/Field.fieldSize);
+			if(f == null) {
+				return;
+			}
 			if(key == 'r') {
 				restart();
 				return;
@@ -279,6 +308,8 @@ public class Main extends PApplet{
 				endGame(false);
 			}else if(key == 'x') {
 				stopMap();
+			}else if(key == 's') {
+				playSound("test.wav");
 			}
 			if(active && bombsPlaced) {
 				checkWin();
