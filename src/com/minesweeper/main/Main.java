@@ -118,6 +118,7 @@ public class Main extends PApplet {
         sounds = new HashMap<>();
 
         createGui();
+
         gradient = loadImage("res/gradient_b-w.png");
         stopMap();
     }
@@ -148,10 +149,10 @@ public class Main extends PApplet {
                 fill(10, 255, 10);
                 text(map.getFlagCount() + "/" + map.getBombCount(), width / 2, 17);
                 textAlign(LEFT);
-            }else{
+            } else {
                 fill(255);
                 textAlign(CENTER);
-                text( "00:00", width / 3, 17);
+                text("00:00", width / 3, 17);
                 fill(10, 255, 10);
                 text("0/0", width / 2, 17);
                 textAlign(LEFT);
@@ -194,10 +195,10 @@ public class Main extends PApplet {
 
     private static synchronized void playSound(final String url, boolean free) {
         try {
-            if(free){
+            if (free) {
                 AudioPlayer sound = minim.loadFile("res/sounds/" + url);
                 sound.play();
-            }else {
+            } else {
                 if (!sounds.containsKey(url)) {
                     AudioPlayer sound = minim.loadFile("res/sounds/" + url);
                     sounds.put(url, sound);
