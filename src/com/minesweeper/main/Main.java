@@ -1,15 +1,13 @@
 package com.minesweeper.main;
 
-import com.minesweeper.gui.Button;
-import com.minesweeper.gui.GUIAction;
-import com.minesweeper.gui.GUIElement;
 import ddf.minim.AudioPlayer;
 import ddf.minim.Minim;
+import de.guilib.gui.Button;
+import de.guilib.gui.GUIHandler;
 import processing.core.PApplet;
 import processing.core.PFont;
 import processing.core.PImage;
 
-import java.awt.event.ActionEvent;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +15,7 @@ import java.util.List;
 
 public class Main extends PApplet {
 
-    static Main pa;
+    public static Main pa;
     private static int xOff = 0, yOff = 0;
     private static final int WINDOWWIDTH = 928 + 4, WINDOWHEIGHT = 608 + 3 + 18;
 
@@ -33,7 +31,7 @@ public class Main extends PApplet {
     private float difficulty;
     private static float difMin, difMax;
 
-    private static List<GUIElement> gui;
+    private static GUIHandler gui;
     private File highscoreFile;
     private List<Integer> highscores;
     private int timer;
@@ -179,9 +177,7 @@ public class Main extends PApplet {
                 int s = top[i] % 60;
                 text((i + 1) + ". " + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s, width / 8, (height / 3) / top.length * i + height / 10);
             }
-            for (GUIElement e : gui) {
-                e.draw(this);
-            }
+            gui.draw();
         }
     }
 
@@ -240,6 +236,11 @@ public class Main extends PApplet {
         }
     }
 
+    private void flag(Field f) {
+        f.setFlagged(!f.isFlagged());
+        playSound("flag.wav", true);
+    }
+
     private void checkWin() {
         if (active && map.checkWin()) {
             endGame(true);
@@ -253,18 +254,13 @@ public class Main extends PApplet {
             if (mouseButton == LEFT && active) {
                 showField(f);
             } else if (mouseButton == RIGHT && active && !f.isVisible()) {
-                f.setFlagged(!f.isFlagged());
-                playSound("flag.wav", true);
+                flag(f);
             }
             if (active && bombsPlaced) {
                 checkWin();
             }
         } else {
-            for (GUIElement e : GUIElement.clickables) {
-                if (e.isVisible() && e.overLapping(mouseX, mouseY)) {
-                    e.click(this);
-                }
-            }
+            gui.mouseClicked();
         }
     }
 
@@ -278,7 +274,7 @@ public class Main extends PApplet {
                 restart();
                 return;
             } else if (key == 'f' && active && !f.isVisible()) {
-                f.setFlagged(!f.isFlagged());
+                flag(f);
             } else if (key == ' ' && active) {
                 showField(f);
             } else if (key == 'l' && bombsPlaced && active) {
@@ -286,7 +282,7 @@ public class Main extends PApplet {
             } else if (key == 'x') {
                 stopMap();
             } else if (key == 's') {
-                playSound("loose2.wav", true);
+                playSound("reveal.wav", true);
             }
             if (active && bombsPlaced) {
                 checkWin();
@@ -304,41 +300,26 @@ public class Main extends PApplet {
     }
 
     private void createGui() {
-        gui = new ArrayList<>();
-        gui.add(new Button("BABY", width / 8 * 3, height / 3, 200, 50, new GUIAction(this) {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Main.pa.setDifficulty(2, 7);
-                Main.pa.restart();
-            }
+        gui = new GUIHandler(this, font);
+        gui.add(new Button("BABY", width / 8 * 3, height / 3, 200, 50, (pa) -> {
+            Main.pa.setDifficulty(2, 7);
+            Main.pa.restart();
         }));
-        gui.add(new Button("Easy", width / 8, height / 2, 200, 50, new GUIAction(this) {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Main.pa.setDifficulty(7, 12);
-                Main.pa.restart();
-            }
+        gui.add(new Button("Easy", width / 8, height / 2, 200, 50, (pa) -> {
+            Main.pa.setDifficulty(7, 12);
+            Main.pa.restart();
         }));
-        gui.add(new Button("Medium", width / 8 * 3, height / 2, 200, 50, new GUIAction(this) {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Main.pa.setDifficulty(12, 17);
-                Main.pa.restart();
-            }
+        gui.add(new Button("Medium", width / 8 * 3, height / 2, 200, 50, (pa) -> {
+            Main.pa.setDifficulty(12, 17);
+            Main.pa.restart();
         }));
-        gui.add(new Button("Hard", width / 8 * 5, height / 2, 200, 50, new GUIAction(this) {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Main.pa.setDifficulty(17, 27);
-                Main.pa.restart();
-            }
+        gui.add(new Button("Hard", width / 8 * 5, height / 2, 200, 50, (pa) -> {
+            Main.pa.setDifficulty(17, 27);
+            Main.pa.restart();
         }));
-        gui.add(new Button("X-TREME", width / 8 * 3, height / 3 * 2, 200, 50, new GUIAction(this) {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Main.pa.setDifficulty(27, 35);
-                Main.pa.restart();
-            }
+        gui.add(new Button("X-TREME", width / 8 * 3, height / 3 * 2, 200, 50, (pa) -> {
+            Main.pa.setDifficulty(27, 35);
+            Main.pa.restart();
         }));
     }
 }
