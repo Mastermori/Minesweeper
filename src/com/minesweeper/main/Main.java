@@ -2,16 +2,13 @@ package com.minesweeper.main;
 
 import ddf.minim.AudioPlayer;
 import ddf.minim.Minim;
-import de.guilib.gui.Button;
-import de.guilib.gui.GUIHandler;
+import de.guilib.Button;
+import de.guilib.GUIHandler;
 import processing.core.PApplet;
 import processing.core.PFont;
 import processing.core.PImage;
 
-import java.io.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 public class Main extends PApplet {
 
@@ -30,16 +27,18 @@ public class Main extends PApplet {
 
     private float difficulty;
     private static float difMin, difMax;
+    private String diffName;
 
     private static GUIHandler gui;
-    private File highscoreFile;
-    private List<Integer> highscores;
     private int timer;
     private int deltaTimer;
     private int lastDelta;
 
+    private Highscores highscores;
+
     private static HashMap<String, AudioPlayer> sounds;
     private static Minim minim;
+    private static int textSize;
 
     public static void main(String[] args) {
         PApplet.main("com.minesweeper.main.Main");
@@ -47,40 +46,7 @@ public class Main extends PApplet {
 
     public Main() {
         pa = this;
-        highscores = new ArrayList<>();
-        readHighscores();
         //restart();
-    }
-
-    private void readHighscores() {
-        try {
-            highscoreFile = new File("res/highscores.txt");
-            if (!highscoreFile.exists())
-                return;
-            BufferedReader in = new BufferedReader(new FileReader(highscoreFile));
-            String line;
-            while (in.ready() && (line = in.readLine()) != null) {
-                highscores.add(Integer.parseInt(line));
-            }
-            in.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void writeHighscores() {
-        try {
-            highscoreFile = new File("res/highscores.txt");
-            if (!highscoreFile.exists())
-                highscoreFile.createNewFile();
-            BufferedWriter out = new BufferedWriter(new FileWriter(highscoreFile));
-            for (int h : highscores) {
-                out.write(h + "\n");
-            }
-            out.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private void restart() {
@@ -92,16 +58,11 @@ public class Main extends PApplet {
         started = true;
         difficulty = pa.random(difMin / 100f, difMax / 100f);
         System.out.println("Difficulty: " + difficulty);
-        textSize(16);
+        //textSize(16);
         timer = 0;
         deltaTimer = 0;
         //difficulty = random(0.15f, 0.5f);
         //difficulty = 0.01f;
-    }
-
-    private void setDifficulty(int min, int max) {
-        difMin = min;
-        difMax = max;
     }
 
     public void settings() {
@@ -109,6 +70,9 @@ public class Main extends PApplet {
     }
 
     public void setup() {
+        highscores = new Highscores("res/highscores.txt");
+        highscores.readHighscores();
+
         font = createFont("Arial", 16, true);
         textFont(font, 16);
 
@@ -121,14 +85,9 @@ public class Main extends PApplet {
         stopMap();
     }
 
-    private void stopMap() {
-        textSize(32);
-        textAlign(CENTER);
-        started = false;
-    }
-
     public void draw() {
         background(0);
+        surface.setTitle("MeinSweeper          " + (int) frameRate);
         if (started) {
             translate(xOff, yOff);
             map.draw(this);
@@ -156,37 +115,35 @@ public class Main extends PApplet {
                 textAlign(LEFT);
             }
         } else {
-            int[] top = new int[5];
-            for (int i = 0; i < top.length; i++) {
-                top[i] = -1;
-            }
-            for (int h : highscores) {
-                for (int i = 0; i < top.length; i++) {
-                    if (h < top[i] || top[i] == -1) {
-                        moveTop(top, h, i);
-                        top[i] = h;
-                        break;
-                    }
-                }
-            }
             image(gradient, 0, 0);
-            for (int i = 0; i < top.length; i++) {
+            /*for (int i = 0; i < top.length; i++) {
                 if (top[i] == -1)
                     continue;
                 int m = top[i] / 60;
                 int s = top[i] % 60;
                 text((i + 1) + ". " + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s, width / 8, (height / 3) / top.length * i + height / 10);
-            }
+            }*/
             gui.draw();
         }
     }
 
-    private void moveTop(int[] top, int next, int startI) {
-        for (int i = startI; i < top.length; i++) {
-            int temp = top[i];
-            top[i] = next;
-            next = temp;
+    private void setTextSize(int size) {
+        if (textSize == size) {
+            return;
         }
+        textSize(size);
+        textSize = size;
+    }
+
+    private void stopMap() {
+        //setTextSize(32);
+        textAlign(CENTER);
+        started = false;
+    }
+
+    private void setDifficulty(int min, int max) {
+        difMin = min;
+        difMax = max;
     }
 
     private static synchronized void playSound(final String url, boolean free) {
@@ -212,8 +169,8 @@ public class Main extends PApplet {
         map.revealBombs(won);
         if (won) {
             playSound("win.wav", false);
-            highscores.add(timer);
-            writeHighscores();
+            highscores.add(diffName, "Anon", timer, difficulty, map.getBombCount());
+            highscores.writeHighscores();
         } else {
             playSound("loose2.wav", false);
         }
@@ -283,6 +240,8 @@ public class Main extends PApplet {
                 stopMap();
             } else if (key == 's') {
                 playSound("reveal.wav", true);
+            } else if (key == 'ö') {
+                endGame(true);
             }
             if (active && bombsPlaced) {
                 checkWin();
@@ -302,24 +261,29 @@ public class Main extends PApplet {
     private void createGui() {
         gui = new GUIHandler(this, font);
         gui.add(new Button("BABY", width / 8 * 3, height / 3, 200, 50, (pa) -> {
-            Main.pa.setDifficulty(2, 7);
-            Main.pa.restart();
+            setDifficulty(2, 7);
+            restart();
+            diffName = "baby";
         }));
         gui.add(new Button("Easy", width / 8, height / 2, 200, 50, (pa) -> {
-            Main.pa.setDifficulty(7, 12);
-            Main.pa.restart();
+            setDifficulty(7, 12);
+            restart();
+            diffName = "easy";
         }));
         gui.add(new Button("Medium", width / 8 * 3, height / 2, 200, 50, (pa) -> {
-            Main.pa.setDifficulty(12, 17);
-            Main.pa.restart();
+            setDifficulty(12, 17);
+            restart();
+            diffName = "medium";
         }));
         gui.add(new Button("Hard", width / 8 * 5, height / 2, 200, 50, (pa) -> {
-            Main.pa.setDifficulty(17, 27);
-            Main.pa.restart();
+            setDifficulty(17, 27);
+            restart();
+            diffName = "hard";
         }));
         gui.add(new Button("X-TREME", width / 8 * 3, height / 3 * 2, 200, 50, (pa) -> {
-            Main.pa.setDifficulty(27, 35);
-            Main.pa.restart();
+            setDifficulty(27, 35);
+            restart();
+            diffName = "extreme";
         }));
     }
 }
