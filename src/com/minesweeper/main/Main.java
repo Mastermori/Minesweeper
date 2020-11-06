@@ -296,7 +296,8 @@ public class Main extends PApplet {
     @Override
     public void exit() {
         for (AudioPlayer s : sounds.values()) {
-            s.close();
+            if(s != null)
+                s.close();
         }
         minim.stop();
         super.exit();
